@@ -2,6 +2,7 @@ import os
 import platform
 import subprocess
 import shutil
+import sys
 
 # --- Configuration ---
 APP_NAME = "Sagittarius-ENTJ"
@@ -34,8 +35,11 @@ def build():
     # Use os.pathsep for platform-correct path separation in --add-data (';' on Win, ':' on Linux/macOS)
     add_data_arg = f"{THEMES_DIR}{os.pathsep}themes"
 
+    # Use 'sys.executable -m PyInstaller' to be independent of system PATH
     command = [
-        "pyinstaller",
+        sys.executable,
+        "-m",
+        "PyInstaller",
         "--name", APP_NAME,
         "--onefile",      # Create a single-file executable
         "--windowed",     # No console window in the final application
@@ -66,16 +70,13 @@ def build():
 
         if process.returncode != 0:
             print(f"\n--- PyInstaller Build Failed with return code {process.returncode} ---")
+            print("   Please check the logs above for errors.")
+            print(f"   Ensure PyInstaller is installed: pip install -r requirements.txt")
             return
 
         print("\n--- PyInstaller build completed successfully! ---")
         print(f"Executable created in the '{os.path.abspath(DIST_DIR)}' directory.")
 
-    except FileNotFoundError:
-        print("\n--- Build Failed ---")
-        print("Error: 'pyinstaller' command not found.")
-        print("Please ensure PyInstaller is installed and in your system's PATH.")
-        print(f"You can install it using: pip install -r requirements.txt")
     except Exception as e:
         print(f"\n--- An unexpected error occurred: {e} ---")
 
