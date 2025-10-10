@@ -1,0 +1,129 @@
+/* Light Theme */
+QWidget {
+    font-family: Segoe UI, Arial, sans-serif;
+    font-size: 10pt;
+    background-color: #f8f9fa; /* Light gray background */
+    color: #212529; /* Dark text */
+}
+
+QGroupBox {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    margin-top: 12px;
+    background-color: #ffffff; /* White background for group boxes */
+    padding: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 4px 8px;
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #007ACC, stop:1 #0056b3); /* Blue gradient */
+    color: white;
+    border-radius: 4px;
+    margin-left: 10px;
+}
+
+QLineEdit, QTextEdit, QListWidget {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 5px;
+    background-color: white;
+}
+
+QLineEdit:focus, QTextEdit:focus, QListWidget:focus {
+    border-color: #007ACC; /* Highlight focus with blue */
+}
+
+QListWidget::item {
+     padding: 3px;
+}
+
+QListWidget::item:selected {
+    background-color: #007ACC;
+    color: white;
+}
+
+QPushButton {
+    border: 1px solid #6c757d;
+    border-radius: 4px;
+    padding: 6px 15px;
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:1 #e9ecef); /* Light gradient */
+    min-width: 90px;
+    icon-size: 16px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f8f9fa, stop:1 #d3d9df);
+    border-color: #5a6268;
+}
+
+QPushButton:pressed {
+    background-color: #d3d9df;
+    border-color: #5a6268;
+}
+
+QPushButton:disabled {
+     background-color: #e9ecef;
+     color: #6c757d;
+     border-color: #ced4da;
+}
+
+/* Specific button styles */
+QPushButton#CopyButton {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #28a745, stop:1 #1e7e34); /* Green */
+    color: white;
+    border-color: #1c7430;
+}
+QPushButton#CopyButton:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #34c759, stop:1 #218838);
+    border-color: #1e7e34;
+}
+QPushButton#CopyButton:disabled {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #a1dca7, stop:1 #6ba77c);
+    border-color: #90c497;
+    color: #f0f0f0;
+}
+
+QPushButton#PasteButton {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #17a2b8, stop:1 #117a8b); /* Teal */
+    color: white;
+    border-color: #10707f;
+}
+QPushButton#PasteButton:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #17a2b8, stop:1 #138496);
+    border-color: #117a8b;
+}
+QPushButton#PasteButton:disabled {
+     background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #97d9e3, stop:1 #67a1aa);
+     border-color: #8ac9d3;
+     color: #f0f0f0;
+}
+
+QProgressBar {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    text-align: center;
+    background-color: white;
+    color: #212529;
+}
+
+QProgressBar::chunk {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #28a745, stop:1 #a1f0a1); /* Green gradient chunk */
+    border-radius: 3px;
+    margin: 1px;
+}
+
+QStatusBar {
+    background-color: #e9ecef;
+    color: #6c757d;
+    font-size: 9pt;
+}
+
+QToolTip {
+    background-color: #343a40;
+    color: white;
+    border: 1px solid #343a40;
+    padding: 4px;
+    border-radius: 3px;
+}
