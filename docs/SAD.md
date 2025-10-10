@@ -3,116 +3,185 @@
 ## 1. Introduction
 
 ### 1.1 Purpose
-This document provides a comprehensive architectural overview of the Sagittarius-ENTJ application. It details the chosen architectural style, the decomposition of the system into its primary components, and the interactions between them. This document is intended for developers, architects, and anyone interested in the technical design of the application.
+This document provides a comprehensive and detailed architectural overview of the Sagittarius-ENTJ application. It details the chosen architectural style, the decomposition of the system into its primary components and layers, and the interactions between them.
 
 ### 1.2 Scope
-The scope of this document is the architecture of the Sagittarius-ENTJ application. This includes the definition of the Model-View-ViewModel (MVVM) pattern as implemented, the roles of the main software components, and the key data and control flows. It does not cover detailed class design, which is addressed in the Software Design Document (SDD).
+The scope of this document is the high-level architecture of the Sagittarius-ENTJ application. It covers the system's decomposition from multiple perspectives, including use cases, logical layers, and components.
 
 ### 1.3 Definitions, Acronyms, and Abbreviations
-- **MVVM**: Model-View-ViewModel, a software architectural pattern.
-- **QSS**: Qt Style Sheets, used for styling the application.
-- **Component**: A logical block of the system with a well-defined responsibility.
+- **MVVM**: Model-View-ViewModel
+- **QSS**: Qt Style Sheets
+- **Component**: A logical and replaceable part of the system.
+- **Layer**: A horizontal slice of the architecture that deals with a specific concern.
 
 ---
 
 ## 2. Architectural Representation
 
-The application employs the **Model-View-ViewModel (MVVM)** architectural pattern. This choice was made to enforce a strong separation of concerns between the user interface (View), the application's data and business logic (Model), and the presentation logic that connects them (ViewModel).
-
-- **Model**: Represents the application's data and business logic. It is completely UI-agnostic and handles tasks like scanning the file system, encoding/decoding files, and managing the data structure.
-- **View**: Represents the UI. It is responsible for displaying data and capturing user input. It is designed to be as "dumb" as possible, delegating all logic to the ViewModel.
-- **ViewModel**: Acts as the intermediary between the Model and the View. It handles presentation logic, manages the application's state, and exposes data from the Model to the View in a display-friendly format. It also handles user actions from the View and passes them to the Model.
-- **Worker**: A supplementary component that executes long-running tasks (e.g., file scanning) in a separate thread to prevent the GUI from freezing. It communicates back to the ViewModel using Qt's signals and slots mechanism.
+The application's design is centered around the **Model-View-ViewModel (MVVM)** pattern, which promotes a clean separation of concerns. This architecture is further described through a series of views, including the use case view, a logical layered view, and a component view.
 
 ---
 
-## 3. Architectural Views
+## 3. Use Case View
 
-### 3.1 Component Diagram
+This view illustrates the interactions between the primary actor (the User) and the main functions (use cases) of the Sagittarius-ENTJ application.
 
-This diagram illustrates the primary components of the application and their relationships.
+### 3.1 Use Case Diagram
 
 ```plantuml
 @startuml
 !theme plain
+left to right direction
 
-package "Sagittarius-ENTJ Application" {
-    [View]
-    [ViewModel]
-    [Model]
-    [Worker]
-    [QSettings]
-    [QThreadPool]
+actor "User" as user
 
-    [View] <--> [ViewModel] : Binds to / \nNotifies with Events
-    [ViewModel] --> [Model] : Invokes Methods
-    [ViewModel] --> [Worker] : Runs Task
-    [ViewModel] --> [QSettings] : Reads/Writes Config
-    [Worker] --> [Model] : Invokes Methods
-    [Worker] ..> [ViewModel] : Emits Signals \n(Progress, Finish, Error)
-    [QThreadPool] --> [Worker] : Manages Execution
+rectangle "Sagittarius-ENTJ System" {
+  usecase "Create Snapshot" as UC1
+  usecase "Recreate Snapshot" as UC2
+  usecase "Manage Extensions" as UC3
+  usecase "Configure Paths" as UC4
+  usecase "Change Theme" as UC5
 }
 
-[User] ..> [View] : Interacts with
+user --> UC1
+user --> UC2
+user --> UC3
+user --> UC4
+user --> UC5
 @enduml
 ```
 
-### 3.2 "Create Snapshot" Sequence Diagram
+### 3.2 Use Case Descriptions
+- **Create Snapshot**: The user selects a source directory, an output JSON path, and a set of file extensions, then initiates the process to create a snapshot file.
+- **Recreate Snapshot**: The user selects an existing JSON snapshot file and a target output directory, then initiates the process to recreate the files and folders.
+- **Manage Extensions**: The user adds or removes file extensions to be included in the snapshot.
+- **Configure Paths**: The user selects and modifies the source and destination paths for operations.
+- **Change Theme**: The user selects a visual theme (e.g., Light, Dark) from the UI.
 
-This diagram shows the sequence of interactions when a user initiates the "Create Snapshot" (Copy) operation.
+---
+
+## 4. Logical (Layered) View
+
+The application is structured into distinct logical layers, where each layer has a specific responsibility and communicates only with the layers adjacent to it.
+
+### 4.1 Software Layer Diagram
 
 ```plantuml
 @startuml
 !theme plain
 
-actor User
-participant View
-participant ViewModel
-participant Worker
-participant Model
-participant QThreadPool
+package "Software Layers" {
+    node "Presentation Layer" as ViewLayer
+    node "Presentation Logic Layer" as ViewModelLayer
+    node "Business Logic Layer" as ModelLayer
+    node "Threading & Data Layer" as DataLayer
+    node "Framework & Platform Layer" as FrameworkLayer
+}
 
-autonumber
+ViewLayer -- ViewModelLayer
+ViewModelLayer -- ModelLayer
+ModelLayer -- DataLayer
+ViewModelLayer -- DataLayer
+DataLayer -- FrameworkLayer
 
-User -> View: Clicks "Create Snapshot" button
-View -> ViewModel: perform_copy()
-ViewModel -> ViewModel: Validates input paths
-ViewModel -> QThreadPool: start(worker)
-QThreadPool -> Worker: run()
-Worker -> Model: scan_directory(progress_callback, log_callback)
-activate Model
+note right of ViewLayer
+  **Contains:**
+  - `View` class
+  - UI Widgets (Buttons, Edits)
+  - Theme Stylesheets (*.qss)
+end note
 
-loop For each file
-    Model -> Worker: progress_callback(current, total)
-    Worker -> ViewModel: progress_update.emit(percent)
-    ViewModel -> View: Updates ProgressBar
-end
+note right of ViewModelLayer
+  **Contains:**
+  - `ViewModel` class
+  - State Management
+  - Presentation Logic
+end note
 
-Model --> Worker: Returns database
-deactivate Model
+note right of ModelLayer
+  **Contains:**
+  - `Model` class
+  - File I/O Logic
+  - Data Encoding/Decoding
+end note
 
-Worker -> Model: save_database()
-activate Model
-Model --> Worker: Returns success
-deactivate Model
+note right of DataLayer
+  **Contains:**
+  - `Worker` & `WorkerSignals`
+  - `QThreadPool`
+  - JSON Snapshot file
+  - `QSettings` (for config)
+end note
 
-Worker -> ViewModel: finished.emit()
-ViewModel -> View: Hides ProgressBar, re-enables UI
+note right of FrameworkLayer
+  **Contains:**
+  - `PySide6` (Qt Framework)
+  - Python Standard Library
+end note
+
 @enduml
 ```
 
-### 3.3 Data Flow
+---
 
-1.  **Configuration Data**: User settings (paths, extensions, theme) are entered in the `View`. The `ViewModel` saves these to disk via `QSettings`. On startup, the `ViewModel` loads these settings and populates the `View`.
-2.  **Snapshot Creation**: The `View` triggers the operation. The `ViewModel` gets the source path and extensions, then dispatches a `Worker` thread. The `Worker` calls the `Model` to scan the file system. The `Model` reads files, encodes them, and builds a database in memory. This database is then saved to a JSON file by the `Model`.
-3.  **Snapshot Recreation**: The `View` triggers the operation. The `ViewModel` gets the JSON path and output directory, then dispatches a `Worker`. The `Worker` calls the `Model` to load the JSON file into memory. The `Model` then iterates through the in-memory database, creating directories and writing decoded files to the specified output location.
-4.  **UI Feedback**: During long operations, the `Model` calls progress callbacks passed in by the `Worker`. The `Worker` translates these into Qt signals (`progress_update`, `log_message`), which are emitted to the `ViewModel`. The `ViewModel`, in turn, emits its own signals (`progress_changed`, `message_logged`) that the `View` is connected to, allowing the UI to update in real-time.
+## 5. Component View
+
+This view provides a more detailed breakdown of the system's components and their dependencies.
+
+### 5.1 Detailed Component Diagram
+
+```plantuml
+@startuml
+!theme plain
+
+package "User Interface" {
+  [View]
+  [UI Widgets]
+  folder "Themes" as Themes {
+    [light.qss]
+    [dark.qss]
+  }
+}
+
+package "Application Core" {
+  [ViewModel]
+  [Model]
+  [Worker]
+  [WorkerSignals]
+}
+
+package "Qt Framework" {
+  [QThreadPool]
+  [QSettings]
+  [PySide6 Signals]
+}
+
+database "Data Storage" {
+  [JSON Snapshot]
+  [User Config]
+}
+
+View --> [UI Widgets] : Manages
+View --> Themes : Loads
+View <--> ViewModel : Binds to / Notifies
+ViewModel --> Model : Invokes Methods
+ViewModel --> Worker : Dispatches Task
+ViewModel --> QSettings : Accesses
+QSettings <--> [User Config]
+Worker .up.> [PySide6 Signals] : Emits
+[PySide6 Signals] .up.> ViewModel : Notifies
+Worker o-- WorkerSignals : Contains
+QThreadPool --> Worker : Runs
+Model <--> [JSON Snapshot] : Reads/Writes
+
+@enduml
+```
 
 ---
 
-## 4. Architectural Goals and Constraints
+## 6. Architectural Goals and Constraints
 
-- **Maintainability**: The primary goal of the MVVM architecture is to make the codebase easy to understand, modify, and extend. The separation of concerns is key to achieving this.
-- **Testability**: By decoupling the logic (ViewModel, Model) from the UI (View), the core functionality can be unit-tested independently of the GUI.
-- **Responsiveness**: The use of a `QThreadPool` and `Worker` objects ensures the GUI remains responsive during file I/O operations, which is a critical non-functional requirement.
-- **Cross-Platform**: The architecture is platform-agnostic. All platform-specific details are handled by the underlying Qt framework and Python standard libraries, allowing the same codebase to be built for Windows and Linux.
+- **Maintainability**: The primary goal of the MVVM architecture and layered approach is to make the codebase easy to understand, modify, and extend.
+- **Testability**: By decoupling the logic from the UI, the core functionality can be unit-tested independently of the GUI.
+- **Responsiveness**: The use of a `QThreadPool` and `Worker` component ensures the GUI remains responsive during file I/O operations.
+- **Cross-Platform**: The architecture is platform-agnostic. All platform-specific details are abstracted by the Qt framework and Python standard libraries.
