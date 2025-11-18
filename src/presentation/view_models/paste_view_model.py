@@ -20,6 +20,7 @@ class PasteViewModel(QObject):
     progress_max_changed = Signal(int)
     operation_active = Signal(bool)
     load_completed = Signal(object)  # DirectorySnapshot
+    load_error = Signal(str, object)  # error_msg, exception
     
     def __init__(self, container: DIContainer):
         """
@@ -144,10 +145,19 @@ class PasteViewModel(QObject):
         self.status_update.emit("Snapshot loaded successfully", 5000)
         self.load_completed.emit(snapshot)
     
-    def _on_load_error(self, error_msg: str) -> None:
+    def _on_load_error(self, error_tuple: tuple) -> None:
         """Handle load errors."""
+        # error_tuple is (error_msg, exception) from AsyncWorker
+        if isinstance(error_tuple, tuple) and len(error_tuple) >= 2:
+            error_msg, exception = error_tuple[0], error_tuple[1]
+        else:
+            # Fallback for old format
+            error_msg = str(error_tuple)
+            exception = None
+        
         self.message_logged.emit(f"❌ Load error: {error_msg}")
         self.status_update.emit("Load failed", 5000)
+        self.load_error.emit(error_msg, exception)
     
     def _on_recreate_completed(self, output_path: str) -> None:
         """Handle successful recreate completion."""

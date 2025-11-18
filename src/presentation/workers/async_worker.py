@@ -44,9 +44,9 @@ class AsyncWorker(QRunnable):
         try:
             result = self.fn(*self.args, **self.kwargs)
         except Exception as e:
-            # Emit error with traceback
+            # Emit error with traceback and exception object
             error_msg = f"{str(e)}\n{traceback.format_exc()}"
-            self.signals.error.emit(error_msg)
+            self.signals.error.emit((error_msg, e))
         else:
             # Emit result if successful
             if result is not None:

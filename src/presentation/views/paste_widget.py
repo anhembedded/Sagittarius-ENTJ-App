@@ -110,6 +110,7 @@ class PasteWidget(QWidget):
     def _connect_signals(self):
         """Connect signals."""
         self._viewmodel.load_completed.connect(self._on_load_completed)
+        self._viewmodel.load_error.connect(self._on_load_error)
         self._viewmodel.operation_active.connect(self._on_operation_active)
         
         # Connect text changes to viewmodel
@@ -154,46 +155,44 @@ class PasteWidget(QWidget):
             QMessageBox.warning(self, "Invalid Input", "Please select a JSON file to load.")
             return
         
-        # Try to load the snapshot, handle encryption if needed
-        self._load_with_retry(json_path)
+        # Start load operation
+        self._viewmodel.load_snapshot(json_path)
     
-    def _load_with_retry(self, json_path: str, password: str = None):
+    def _on_load_error(self, error_msg: str, exception) -> None:
         """
-        Load snapshot with automatic password retry on decryption failure.
+        Handle load errors from ViewModel.
         
         Args:
-            json_path: Path to JSON snapshot file.
-            password: Optional password for decryption (None for unencrypted or initial attempt).
+            error_msg: Error message string.
+            exception: The exception object that was raised.
         """
-        try:
-            self._viewmodel.load_snapshot(json_path, password)
-        except (DecryptionError, InvalidPasswordError) as e:
-            # File is encrypted or wrong password provided
-            if password is None:
-                # First attempt - file is encrypted, ask for password
-                password = PasswordDialog.get_decryption_password(self)
-                if password is not None:
-                    # User provided password, retry
-                    self._load_with_retry(json_path, password)
-                # else: User cancelled, do nothing
-            else:
-                # Wrong password provided, show error and retry
-                QMessageBox.critical(
-                    self,
-                    "Decryption Failed",
-                    "The password you entered is incorrect.\n"
-                    "Please try again."
-                )
-                # Ask for password again
-                password = PasswordDialog.get_decryption_password(self)
-                if password is not None:
-                    self._load_with_retry(json_path, password)
-        except Exception as e:
+        # Check if this is a DecryptionError (file is encrypted)
+        if exception and isinstance(exception, DecryptionError):
+            # Ask user for password
+            password = PasswordDialog.get_decryption_password(self)
+            if password is not None:
+                # Retry with password
+                json_path = self.json_edit.text().strip()
+                self._viewmodel.load_snapshot(json_path, password)
+            # else: User cancelled, do nothing
+        elif exception and isinstance(exception, InvalidPasswordError):
+            # Wrong password - show error and ask again
+            QMessageBox.critical(
+                self,
+                "Decryption Failed",
+                "The password you entered is incorrect.\n"
+                "Please try again."
+            )
+            password = PasswordDialog.get_decryption_password(self)
+            if password is not None:
+                json_path = self.json_edit.text().strip()
+                self._viewmodel.load_snapshot(json_path, password)
+        else:
             # Other errors - show error message
             QMessageBox.critical(
                 self,
                 "Load Failed",
-                f"Failed to load snapshot:\n{str(e)}"
+                f"Failed to load snapshot:\n{error_msg}"
             )
     
     def _on_load_completed(self, snapshot):

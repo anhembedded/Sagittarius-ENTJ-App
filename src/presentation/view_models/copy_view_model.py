@@ -146,8 +146,14 @@ class CopyViewModel(QObject):
         self.status_update.emit("Scan completed successfully", 5000)
         self.scan_completed.emit(snapshot)
     
-    def _on_scan_error(self, error_msg: str) -> None:
+    def _on_scan_error(self, error_tuple) -> None:
         """Handle scan errors."""
+        # Handle both old string format and new tuple format
+        if isinstance(error_tuple, tuple) and len(error_tuple) >= 1:
+            error_msg = error_tuple[0]
+        else:
+            error_msg = str(error_tuple)
+        
         self.message_logged.emit(f"❌ Scan error: {error_msg}")
         self.status_update.emit("Scan failed", 5000)
     
@@ -160,8 +166,14 @@ class CopyViewModel(QObject):
             self.message_logged.emit(f"✅ Snapshot saved to: {path}")
             self.status_update.emit("Save completed successfully", 5000)
     
-    def _on_save_error(self, error_msg: str) -> None:
+    def _on_save_error(self, error_tuple) -> None:
         """Handle save errors."""
+        # Handle both old string format and new tuple format
+        if isinstance(error_tuple, tuple) and len(error_tuple) >= 1:
+            error_msg = error_tuple[0]
+        else:
+            error_msg = str(error_tuple)
+        
         self.message_logged.emit(f"❌ Save error: {error_msg}")
         self.status_update.emit("Save failed", 5000)
     
