@@ -84,7 +84,6 @@ class PasteViewModel(QObject):
         # Create and configure worker
         use_case = self._container.get_load_snapshot_use_case()
         worker = AsyncWorker(use_case.execute, path, password)
-        worker = AsyncWorker(use_case.execute, path)
         
         # Connect signals
         worker.signals.result.connect(self._on_load_completed)
