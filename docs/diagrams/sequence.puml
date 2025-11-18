@@ -1,0 +1,36 @@
+@startuml Scan_Directory_Sequence
+
+actor User
+participant UI as "CopyWidget"
+participant UseCase as "ScanDirectoryUseCase"
+participant Worker as "AsyncWorker"
+participant Domain as "DirectorySnapshot"
+participant FS as "FileSystemService"
+participant Encoder as "Base64Encoder"
+participant Progress as "ProgressTracker"
+
+User -> UI: Select directory & Click Scan
+UI -> UseCase: execute(root_path, extensions)
+UseCase -> Worker: run_async(scan_task)
+
+Worker -> FS: walk_directory(root_path)
+FS -> Progress: init(total_files)
+Progress -> UI: progress_max_changed(total)
+
+loop For each file
+  FS -> FS: check_extension(file)
+  alt Extension matches
+    FS -> FS: read_file(path)
+    FS -> Encoder: encode(content)
+    Encoder --> FS: base64_string
+    FS -> Domain: add_file(FileEntry)
+    FS -> Progress: increment()
+    Progress -> UI: progress_changed(current)
+  end
+end
+
+Worker --> UseCase: DirectorySnapshot
+UseCase -> UI: scan_completed(snapshot)
+UI -> User: Show success message
+
+@enduml

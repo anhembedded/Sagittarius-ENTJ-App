@@ -1,0 +1,103 @@
+@startuml Sagittarius_ENTJ_Architecture
+
+!define RECTANGLE class
+
+package "Presentation Layer (UI)" #LightBlue {
+  [MainWindow] as UI
+  [CopyWidget] as CopyUI
+  [PasteWidget] as PasteUI
+  [ExtensionManager] as ExtUI
+  [LogViewer] as LogUI
+}
+
+package "Application Layer (Use Cases)" #LightGreen {
+  [ScanDirectoryUseCase] as ScanUC
+  [SaveSnapshotUseCase] as SaveUC
+  [LoadSnapshotUseCase] as LoadUC
+  [RecreateDirectoryUseCase] as RecreateUC
+  [ManageExtensionsUseCase] as ExtUC
+}
+
+package "Domain Layer (Business Logic)" #LightYellow {
+  [DirectorySnapshot] as Snapshot
+  [FileEntry] as File
+  [DirectoryEntry] as Dir
+  [ExtensionFilter] as Filter
+  [ContentEncoder] as Encoder
+  [SnapshotRepository] <<interface>>
+}
+
+package "Infrastructure Layer" #LightPink {
+  [FileSystemRepository] as FSRepo
+  [JsonSnapshotRepository] as JsonRepo
+  [SettingsRepository] as SettingsRepo
+  [Base64Encoder] as B64Encoder
+  [ProgressTracker] as Progress
+  [Logger] as Log
+}
+
+package "Adapters/Workers" #LightGray {
+  [AsyncWorker] as Worker
+  [SignalBus] as Bus
+}
+
+' Presentation -> Application
+UI --> ScanUC
+UI --> SaveUC
+UI --> LoadUC
+UI --> RecreateUC
+CopyUI --> ScanUC
+CopyUI --> SaveUC
+PasteUI --> LoadUC
+PasteUI --> RecreateUC
+ExtUI --> ExtUC
+
+' Application -> Domain
+ScanUC --> Snapshot
+ScanUC --> Filter
+SaveUC --> Snapshot
+SaveUC --> SnapshotRepository
+LoadUC --> SnapshotRepository
+RecreateUC --> Snapshot
+ExtUC --> Filter
+
+' Domain -> Infrastructure
+SnapshotRepository <|.. JsonRepo
+Encoder <|.. B64Encoder
+Snapshot --> File
+Snapshot --> Dir
+File --> Encoder
+
+' Infrastructure
+JsonRepo --> FSRepo
+FSRepo --> Log
+Progress --> Bus
+Worker --> Bus
+
+' Cross-cutting
+ScanUC --> Worker
+RecreateUC --> Worker
+Worker --> Progress
+Bus --> UI
+
+note right of SnapshotRepository
+  Repository Pattern
+  - Abstraction for persistence
+  - Easy to mock for testing
+end note
+
+note right of Snapshot
+  Domain Model
+  - Pure business logic
+  - No framework dependencies
+  - Framework agnostic
+end note
+
+note bottom of Worker
+  Async Operations
+  - Qt QThreadPool
+  - Signal/Slot pattern
+  - Non-blocking UI
+end note
+
+@enduml
