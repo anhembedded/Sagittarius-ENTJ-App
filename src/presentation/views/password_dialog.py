@@ -201,7 +201,7 @@ class PasswordDialog(QDialog):
             parent: Parent widget.
             
         Returns:
-            Password string, or empty string if cancelled.
+            Password string, or None if cancelled.
         """
         dialog = PasswordDialog(
             title="Encrypt Snapshot",
@@ -210,7 +210,7 @@ class PasswordDialog(QDialog):
         )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             return dialog.get_password()
-        return ""
+        return None
     
     @staticmethod
     def get_decryption_password(parent=None) -> str:
@@ -221,7 +221,7 @@ class PasswordDialog(QDialog):
             parent: Parent widget.
             
         Returns:
-            Password string, or empty string if cancelled.
+            Password string, or None if cancelled.
         """
         dialog = PasswordDialog(
             title="Decrypt Snapshot",
@@ -230,4 +230,4 @@ class PasswordDialog(QDialog):
         )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             return dialog.get_password()
-        return ""
+        return None

@@ -170,7 +170,7 @@ class PasteWidget(QWidget):
         if exception and isinstance(exception, DecryptionError):
             # Ask user for password
             password = PasswordDialog.get_decryption_password(self)
-            if password is not None:
+            if password is not None:  # User didn't cancel
                 # Retry with password
                 json_path = self.json_edit.text().strip()
                 self._viewmodel.load_snapshot(json_path, password)
@@ -184,7 +184,7 @@ class PasteWidget(QWidget):
                 "Please try again."
             )
             password = PasswordDialog.get_decryption_password(self)
-            if password is not None:
+            if password is not None:  # User didn't cancel
                 json_path = self.json_edit.text().strip()
                 self._viewmodel.load_snapshot(json_path, password)
         else:
