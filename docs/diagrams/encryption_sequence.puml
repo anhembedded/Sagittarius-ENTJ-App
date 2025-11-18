@@ -1,0 +1,135 @@
+@startuml Encryption Sequence Diagram
+
+actor User
+participant CopyWidget
+participant PasswordDialog
+participant CopyViewModel
+participant SaveSnapshotUseCase
+participant JsonSnapshotRepository
+participant AESGCMEncryptor
+
+== Save with Encryption ==
+
+User -> CopyWidget: Click "Save" with encryption enabled
+activate CopyWidget
+
+CopyWidget -> PasswordDialog: Show password dialog
+activate PasswordDialog
+User -> PasswordDialog: Enter password
+PasswordDialog --> CopyWidget: Return password
+deactivate PasswordDialog
+
+CopyWidget -> CopyViewModel: save_snapshot(snapshot, path, password)
+activate CopyViewModel
+
+CopyViewModel -> SaveSnapshotUseCase: execute(snapshot, path, password)
+activate SaveSnapshotUseCase
+
+SaveSnapshotUseCase -> JsonSnapshotRepository: save(snapshot, path, password)
+activate JsonSnapshotRepository
+
+JsonSnapshotRepository -> JsonSnapshotRepository: Convert snapshot to JSON
+JsonSnapshotRepository -> JsonSnapshotRepository: Encode to bytes
+
+alt Password provided
+    JsonSnapshotRepository -> AESGCMEncryptor: encrypt(json_bytes, password)
+    activate AESGCMEncryptor
+    
+    AESGCMEncryptor -> AESGCMEncryptor: Generate salt (32 bytes)
+    AESGCMEncryptor -> AESGCMEncryptor: Generate nonce (12 bytes)
+    AESGCMEncryptor -> AESGCMEncryptor: Derive key with PBKDF2\n(100,000 iterations)
+    AESGCMEncryptor -> AESGCMEncryptor: Encrypt with AES-GCM
+    AESGCMEncryptor -> AESGCMEncryptor: Build file format:\n[MAGIC|VERSION|SALT|NONCE|CIPHERTEXT]
+    
+    AESGCMEncryptor --> JsonSnapshotRepository: Return encrypted bytes
+    deactivate AESGCMEncryptor
+end
+
+JsonSnapshotRepository -> JsonSnapshotRepository: Write to file
+JsonSnapshotRepository --> SaveSnapshotUseCase: Success
+deactivate JsonSnapshotRepository
+
+SaveSnapshotUseCase --> CopyViewModel: Success
+deactivate SaveSnapshotUseCase
+
+CopyViewModel --> CopyWidget: Success
+deactivate CopyViewModel
+
+CopyWidget --> User: Show success message
+deactivate CopyWidget
+
+== Load Encrypted File ==
+
+User -> PasteWidget: Click "Load"
+activate PasteWidget
+
+PasteWidget -> PasteViewModel: load_snapshot(path)
+activate PasteViewModel
+
+PasteViewModel -> LoadSnapshotUseCase: execute(path)
+activate LoadSnapshotUseCase
+
+LoadSnapshotUseCase -> JsonSnapshotRepository: load(path)
+activate JsonSnapshotRepository
+
+JsonSnapshotRepository -> JsonSnapshotRepository: Read file bytes
+
+JsonSnapshotRepository -> AESGCMEncryptor: is_encrypted(bytes)
+activate AESGCMEncryptor
+AESGCMEncryptor -> AESGCMEncryptor: Check magic header
+AESGCMEncryptor --> JsonSnapshotRepository: True
+deactivate AESGCMEncryptor
+
+alt File is encrypted
+    JsonSnapshotRepository --> LoadSnapshotUseCase: Throw DecryptionError("Password required")
+    deactivate JsonSnapshotRepository
+    LoadSnapshotUseCase --> PasteViewModel: DecryptionError
+    deactivate LoadSnapshotUseCase
+    PasteViewModel --> PasteWidget: DecryptionError
+    deactivate PasteViewModel
+    
+    PasteWidget -> PasswordDialog: Show password dialog
+    activate PasswordDialog
+    User -> PasswordDialog: Enter password
+    PasswordDialog --> PasteWidget: Return password
+    deactivate PasswordDialog
+    
+    PasteWidget -> PasteViewModel: load_snapshot(path, password)
+    activate PasteViewModel
+    PasteViewModel -> LoadSnapshotUseCase: execute(path, password)
+    activate LoadSnapshotUseCase
+    LoadSnapshotUseCase -> JsonSnapshotRepository: load(path, password)
+    activate JsonSnapshotRepository
+    
+    JsonSnapshotRepository -> JsonSnapshotRepository: Read file bytes
+    JsonSnapshotRepository -> AESGCMEncryptor: decrypt(bytes, password)
+    activate AESGCMEncryptor
+    
+    AESGCMEncryptor -> AESGCMEncryptor: Parse file format
+    AESGCMEncryptor -> AESGCMEncryptor: Extract salt, nonce
+    AESGCMEncryptor -> AESGCMEncryptor: Derive key with PBKDF2
+    AESGCMEncryptor -> AESGCMEncryptor: Decrypt with AES-GCM
+    
+    alt Decryption successful
+        AESGCMEncryptor --> JsonSnapshotRepository: Decrypted JSON bytes
+    else Wrong password or corrupted
+        AESGCMEncryptor --> JsonSnapshotRepository: Throw InvalidPasswordError
+    end
+    deactivate AESGCMEncryptor
+end
+
+JsonSnapshotRepository -> JsonSnapshotRepository: Parse JSON
+JsonSnapshotRepository -> JsonSnapshotRepository: Create DirectorySnapshot
+JsonSnapshotRepository --> LoadSnapshotUseCase: Return snapshot
+deactivate JsonSnapshotRepository
+
+LoadSnapshotUseCase --> PasteViewModel: Return snapshot
+deactivate LoadSnapshotUseCase
+
+PasteViewModel --> PasteWidget: Return snapshot
+deactivate PasteViewModel
+
+PasteWidget --> User: Display snapshot info
+deactivate PasteWidget
+
+@enduml

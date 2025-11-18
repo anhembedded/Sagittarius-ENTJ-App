@@ -39,3 +39,18 @@ class SnapshotNotFoundError(RepositoryError):
 class InvalidSnapshotError(ValidationError):
     """Raised when a snapshot is invalid or corrupted."""
     pass
+
+
+class EncryptionError(SagittariusException):
+    """Raised when encryption fails."""
+    pass
+
+
+class DecryptionError(SagittariusException):
+    """Raised when decryption fails."""
+    pass
+
+
+class InvalidPasswordError(DecryptionError):
+    """Raised when decryption password is incorrect."""
+    pass

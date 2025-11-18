@@ -97,23 +97,29 @@ class CopyViewModel(QObject):
         # Start worker
         self._threadpool.start(worker)
     
-    def save_snapshot(self, snapshot: DirectorySnapshot, path: str) -> None:
+    def save_snapshot(self, snapshot: DirectorySnapshot, path: str, 
+                     password: Optional[str] = None) -> None:
         """
-        Save a snapshot to JSON file asynchronously.
+        Save a snapshot to JSON file asynchronously with optional encryption.
         
         Args:
             snapshot: The snapshot to save.
             path: The file path to save to.
+            password: Optional password for encryption.
         """
         self.operation_active.emit(True)
-        self.message_logged.emit(f"💾 Saving snapshot to: {path}")
+        
+        if password:
+            self.message_logged.emit(f"🔐 Encrypting and saving snapshot to: {path}")
+        else:
+            self.message_logged.emit(f"💾 Saving snapshot to: {path}")
         
         # Create and configure worker
         use_case = self._container.get_save_snapshot_use_case()
-        worker = AsyncWorker(use_case.execute, snapshot, path)
+        worker = AsyncWorker(use_case.execute, snapshot, path, password)
         
         # Connect signals
-        worker.signals.result.connect(lambda: self._on_save_completed(path))
+        worker.signals.result.connect(lambda: self._on_save_completed(path, password is not None))
         worker.signals.error.connect(self._on_save_error)
         worker.signals.finished.connect(self._on_operation_finished)
         
@@ -145,10 +151,14 @@ class CopyViewModel(QObject):
         self.message_logged.emit(f"❌ Scan error: {error_msg}")
         self.status_update.emit("Scan failed", 5000)
     
-    def _on_save_completed(self, path: str) -> None:
+    def _on_save_completed(self, path: str, was_encrypted: bool = False) -> None:
         """Handle successful save completion."""
-        self.message_logged.emit(f"✅ Snapshot saved to: {path}")
-        self.status_update.emit("Save completed successfully", 5000)
+        if was_encrypted:
+            self.message_logged.emit(f"✅ Encrypted snapshot saved to: {path}")
+            self.status_update.emit("Encrypted save completed successfully", 5000)
+        else:
+            self.message_logged.emit(f"✅ Snapshot saved to: {path}")
+            self.status_update.emit("Save completed successfully", 5000)
     
     def _on_save_error(self, error_msg: str) -> None:
         """Handle save errors."""

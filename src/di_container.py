@@ -5,9 +5,11 @@ from typing import Optional
 from .domain.interfaces.encoder import IContentEncoder
 from .domain.interfaces.file_system import IFileSystemService
 from .domain.interfaces.repository import ISnapshotRepository
+from .domain.interfaces.encryption import IEncryptionService
 from .domain.services.extension_filter import ExtensionFilter
 
 from .infrastructure.encoding.base64_encoder import Base64Encoder
+from .infrastructure.encryption.aes_gcm_encryptor import AESGCMEncryptor
 from .infrastructure.file_system.file_system_service import FileSystemService
 from .infrastructure.persistence.json_repository import JsonSnapshotRepository
 from .infrastructure.persistence.settings_repository import SettingsRepository
@@ -25,6 +27,7 @@ class DIContainer:
         """Initialize the DI container with all dependencies."""
         # Infrastructure layer (Singletons)
         self._encoder: Optional[IContentEncoder] = None
+        self._encryption_service: Optional[IEncryptionService] = None
         self._file_system: Optional[IFileSystemService] = None
         self._snapshot_repository: Optional[ISnapshotRepository] = None
         self._settings_repository: Optional[SettingsRepository] = None
@@ -46,11 +49,18 @@ class DIContainer:
             self._file_system = FileSystemService()
         return self._file_system
     
+    def get_encryption_service(self) -> IEncryptionService:
+        """Get encryption service instance."""
+        if self._encryption_service is None:
+            self._encryption_service = AESGCMEncryptor()
+        return self._encryption_service
+    
     def get_snapshot_repository(self) -> ISnapshotRepository:
         """Get snapshot repository instance."""
         if self._snapshot_repository is None:
             encoder = self.get_encoder()
-            self._snapshot_repository = JsonSnapshotRepository(encoder)
+            encryption = self.get_encryption_service()
+            self._snapshot_repository = JsonSnapshotRepository(encoder, encryption)
         return self._snapshot_repository
     
     def get_settings_repository(self) -> SettingsRepository:

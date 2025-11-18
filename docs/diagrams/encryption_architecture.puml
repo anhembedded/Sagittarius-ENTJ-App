@@ -1,0 +1,135 @@
+@startuml Encryption Architecture
+
+' Style
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+' Domain Layer
+package "Domain Layer" <<Rectangle>> {
+  interface IEncryptionService {
+    +encrypt(data: bytes, password: str): bytes
+    +decrypt(data: bytes, password: str): bytes
+    +is_encrypted(data: bytes): bool
+  }
+  
+  interface ISnapshotRepository {
+    +save(snapshot, path, password?): void
+    +load(path, password?): DirectorySnapshot
+  }
+  
+  class EncryptionError extends Exception
+  class DecryptionError extends Exception  
+  class InvalidPasswordError extends DecryptionError
+}
+
+' Infrastructure Layer
+package "Infrastructure Layer" <<Rectangle>> {
+  class AESGCMEncryptor {
+    -MAGIC_HEADER: bytes = b"SAGENC"
+    -VERSION: int = 1
+    -SALT_SIZE: int = 32
+    -NONCE_SIZE: int = 12
+    -KEY_SIZE: int = 32
+    -ITERATIONS: int = 100000
+    
+    +encrypt(data: bytes, password: str): bytes
+    +decrypt(data: bytes, password: str): bytes
+    +is_encrypted(data: bytes): bool
+    -_derive_key(password: str, salt: bytes): bytes
+    -_generate_salt(): bytes
+    -_generate_nonce(): bytes
+  }
+  
+  class JsonSnapshotRepository {
+    -encoder: IContentEncoder
+    -encryption_service: IEncryptionService
+    
+    +save(snapshot, path, password?): void
+    +load(path, password?): DirectorySnapshot
+  }
+}
+
+' Application Layer
+package "Application Layer" <<Rectangle>> {
+  class SaveSnapshotUseCase {
+    -repository: ISnapshotRepository
+    
+    +execute(snapshot, path, password?): void
+  }
+  
+  class LoadSnapshotUseCase {
+    -repository: ISnapshotRepository
+    
+    +execute(path, password?): DirectorySnapshot
+  }
+}
+
+' Presentation Layer
+package "Presentation Layer" <<Rectangle>> {
+  class CopyViewModel {
+    -save_use_case: SaveSnapshotUseCase
+    +enable_encryption: bool
+    
+    +save_snapshot(snapshot, path, password?): void
+  }
+  
+  class PasteViewModel {
+    -load_use_case: LoadSnapshotUseCase
+    
+    +load_snapshot(path, password?): DirectorySnapshot
+  }
+  
+  class PasswordDialog {
+    -password_input: QLineEdit
+    -confirm_input: QLineEdit
+    -show_password_cb: QCheckBox
+    
+    +get_password(): str
+    +exec(): int
+  }
+  
+  class CopyWidget {
+    -viewmodel: CopyViewModel
+    -encryption_checkbox: QCheckBox
+    
+    +on_save_clicked(): void
+  }
+  
+  class PasteWidget {
+    -viewmodel: PasteViewModel
+    
+    +on_load_clicked(): void
+  }
+}
+
+' Relationships
+AESGCMEncryptor ..|> IEncryptionService : implements
+JsonSnapshotRepository ..|> ISnapshotRepository : implements
+JsonSnapshotRepository o-- IEncryptionService : uses
+
+SaveSnapshotUseCase o-- ISnapshotRepository : uses
+LoadSnapshotUseCase o-- ISnapshotRepository : uses
+
+CopyViewModel o-- SaveSnapshotUseCase : uses
+PasteViewModel o-- LoadSnapshotUseCase : uses
+
+CopyWidget o-- CopyViewModel : uses
+PasteWidget o-- PasteViewModel : uses
+
+CopyWidget ..> PasswordDialog : creates
+PasteWidget ..> PasswordDialog : creates
+
+' Notes
+note right of AESGCMEncryptor
+  Uses cryptography library
+  - AES-256-GCM for encryption
+  - PBKDF2-HMAC-SHA256 for key derivation
+  - 100,000 iterations
+end note
+
+note right of JsonSnapshotRepository
+  Automatically detects encrypted files
+  Backward compatible with unencrypted
+end note
+
+@enduml

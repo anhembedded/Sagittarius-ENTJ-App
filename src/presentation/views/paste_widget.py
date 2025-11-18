@@ -7,6 +7,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from ..view_models.paste_view_model import PasteViewModel
+from .password_dialog import PasswordDialog
+from ...shared.exceptions import DecryptionError, InvalidPasswordError
 
 
 class PasteWidget(QWidget):
@@ -152,7 +154,47 @@ class PasteWidget(QWidget):
             QMessageBox.warning(self, "Invalid Input", "Please select a JSON file to load.")
             return
         
-        self._viewmodel.load_snapshot(json_path)
+        # Try to load the snapshot, handle encryption if needed
+        self._load_with_retry(json_path)
+    
+    def _load_with_retry(self, json_path: str, password: str = None):
+        """
+        Load snapshot with automatic password retry on decryption failure.
+        
+        Args:
+            json_path: Path to JSON snapshot file.
+            password: Optional password for decryption (None for unencrypted or initial attempt).
+        """
+        try:
+            self._viewmodel.load_snapshot(json_path, password)
+        except (DecryptionError, InvalidPasswordError) as e:
+            # File is encrypted or wrong password provided
+            if password is None:
+                # First attempt - file is encrypted, ask for password
+                password = PasswordDialog.get_decryption_password(self)
+                if password is not None:
+                    # User provided password, retry
+                    self._load_with_retry(json_path, password)
+                # else: User cancelled, do nothing
+            else:
+                # Wrong password provided, show error and retry
+                QMessageBox.critical(
+                    self,
+                    "Decryption Failed",
+                    "The password you entered is incorrect.\n"
+                    "Please try again."
+                )
+                # Ask for password again
+                password = PasswordDialog.get_decryption_password(self)
+                if password is not None:
+                    self._load_with_retry(json_path, password)
+        except Exception as e:
+            # Other errors - show error message
+            QMessageBox.critical(
+                self,
+                "Load Failed",
+                f"Failed to load snapshot:\n{str(e)}"
+            )
     
     def _on_load_completed(self, snapshot):
         """Handle load completion."""

@@ -66,18 +66,24 @@ class PasteViewModel(QObject):
         """Get the current snapshot if available."""
         return self._current_snapshot
     
-    def load_snapshot(self, path: str) -> None:
+    def load_snapshot(self, path: str, password: Optional[str] = None) -> None:
         """
-        Load a snapshot from JSON file asynchronously.
+        Load a snapshot from JSON file asynchronously with optional decryption.
         
         Args:
             path: The JSON file path to load from.
+            password: Optional password for decryption.
         """
         self.operation_active.emit(True)
-        self.message_logged.emit(f"📂 Loading snapshot from: {path}")
+        
+        if password:
+            self.message_logged.emit(f"🔓 Decrypting and loading snapshot from: {path}")
+        else:
+            self.message_logged.emit(f"📂 Loading snapshot from: {path}")
         
         # Create and configure worker
         use_case = self._container.get_load_snapshot_use_case()
+        worker = AsyncWorker(use_case.execute, path, password)
         worker = AsyncWorker(use_case.execute, path)
         
         # Connect signals

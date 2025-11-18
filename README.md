@@ -13,6 +13,10 @@ A powerful directory snapshot tool for structured data management, designed for 
 - **Advanced Configuration**
   - Custom file extension filters
   - Base64 file content encoding
+- **Security**
+  - 🔐 Password-protected encryption (AES-256-GCM)
+  - Optional snapshot encryption with strong authentication
+  - Secure key derivation using PBKDF2-HMAC-SHA256
 - **Enterprise-Grade Architecture**
   - MVVM pattern implementation
   - Asynchronous operations
@@ -35,4 +39,25 @@ git clone https://github.com/yourusername/Sagittarius-ENTJ.git
 cd Sagittarius-ENTJ
 
 # Install dependencies
-pip install pyside6
+pip install -r requirements.txt
+```
+
+## Usage 🚀
+
+### Creating an Encrypted Snapshot
+1. Open the "Copy" tab
+2. Select the source directory to snapshot
+3. Choose output JSON file location
+4. ✅ Check "🔐 Enable Encryption" for password protection
+5. Click "📸 Create Snapshot"
+6. Enter and confirm your password
+7. Snapshot will be encrypted with AES-256-GCM
+
+### Loading an Encrypted Snapshot
+1. Open the "Paste" tab
+2. Click "📂 Load Snapshot" and select the encrypted JSON file
+3. Enter the password when prompted
+4. Select output directory
+5. Click "📂 Restore Directory"
+
+**Note**: Encrypted snapshots are not human-readable and require the original password to decrypt.

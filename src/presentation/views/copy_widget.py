@@ -2,12 +2,13 @@
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QFormLayout,
-    QLineEdit, QPushButton, QFileDialog, QMessageBox
+    QLineEdit, QPushButton, QFileDialog, QMessageBox, QCheckBox
 )
 from PySide6.QtCore import Qt
 
 from ...di_container import DIContainer
 from ..view_models.copy_view_model import CopyViewModel
+from .password_dialog import PasswordDialog
 
 
 class CopyWidget(QWidget):
@@ -68,6 +69,20 @@ class CopyWidget(QWidget):
         json_layout.addRow("Path:", json_row)
         json_group.setLayout(json_layout)
         layout.addWidget(json_group)
+        
+        # Encryption section
+        encryption_group = QGroupBox("Security Options")
+        encryption_layout = QVBoxLayout()
+        
+        self.encrypt_checkbox = QCheckBox("🔐 Enable Encryption (Password Protected)")
+        self.encrypt_checkbox.setToolTip(
+            "Encrypt the snapshot file with a password.\n"
+            "You will need to provide the same password when loading this snapshot."
+        )
+        encryption_layout.addWidget(self.encrypt_checkbox)
+        
+        encryption_group.setLayout(encryption_layout)
+        layout.addWidget(encryption_group)
         
         # Action button
         action_layout = QHBoxLayout()
@@ -148,6 +163,16 @@ class CopyWidget(QWidget):
             )
             return
         
+        # Check if encryption is enabled and get password if needed
+        password = None
+        if self.encrypt_checkbox.isChecked():
+            password = PasswordDialog.get_encryption_password(self)
+            if password is None:  # User cancelled password dialog
+                return
+        
+        # Store password for use in scan completion
+        self._encryption_password = password
+        
         # Start scan
         self._viewmodel.scan_directory(source_dir, extensions)
     
@@ -156,7 +181,11 @@ class CopyWidget(QWidget):
         # Auto-save if JSON path is set
         json_path = self.json_edit.text().strip()
         if json_path:
-            self._viewmodel.save_snapshot(snapshot, json_path)
+            # Use stored encryption password from scan click
+            password = getattr(self, '_encryption_password', None)
+            self._viewmodel.save_snapshot(snapshot, json_path, password)
+            # Clear password from memory
+            self._encryption_password = None
         else:
             QMessageBox.information(
                 self,
@@ -170,3 +199,4 @@ class CopyWidget(QWidget):
         self.scan_btn.setEnabled(not active)
         self.browse_source_btn.setEnabled(not active)
         self.browse_json_btn.setEnabled(not active)
+        self.encrypt_checkbox.setEnabled(not active)

@@ -1,5 +1,7 @@
 """Save snapshot use case."""
 
+from typing import Optional
+
 from ...domain.models.snapshot import DirectorySnapshot
 from ...domain.interfaces.repository import ISnapshotRepository
 from ...shared.exceptions import RepositoryError
@@ -17,13 +19,15 @@ class SaveSnapshotUseCase:
         """
         self._repository = repository
     
-    def execute(self, snapshot: DirectorySnapshot, path: str) -> None:
+    def execute(self, snapshot: DirectorySnapshot, path: str, 
+                password: Optional[str] = None) -> None:
         """
         Execute the save snapshot use case.
         
         Args:
             snapshot: The snapshot to save.
             path: File path where to save the snapshot.
+            password: Optional password for encryption.
             
         Raises:
             RepositoryError: If saving fails.
@@ -32,4 +36,4 @@ class SaveSnapshotUseCase:
         snapshot.validate()
         
         # Save using repository
-        self._repository.save(snapshot, path)
+        self._repository.save(snapshot, path, password)
